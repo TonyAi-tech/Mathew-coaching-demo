@@ -1,7 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Gamepad2, Clock, Target, MessageSquare, Instagram, Twitter, Mail, Hexagon, Calendar, User, Trophy, ArrowRight, Crosshair, Shield, Brain, Zap, Users, Award, BarChart } from 'lucide-react';
+import { supabase } from './lib/supabase';
+import toast, { Toaster } from 'react-hot-toast';
 
 function App() {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    clientName: '',
+    clientEmail: '',
+    sessionDate: '',
+    sessionTime: '',
+    clientPhone: '',
+    specialRequests: '',
+    serviceType: 'Personalized Coaching' // default value
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Convert date and time strings to proper format
+      const sessionDateTime = new Date(`${formData.sessionDate}T${formData.sessionTime}`);
+
+      const { error } = await supabase
+        .from('session_bookings')
+        .insert([
+          {
+            client_name: formData.clientName,
+            client_email: formData.clientEmail,
+            session_date: sessionDateTime.toISOString(),
+            session_time: formData.sessionTime,
+            service_type: formData.serviceType,
+            client_phone: formData.clientPhone || null,
+            special_requests: formData.specialRequests || null,
+            booking_status: 'pending'
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast.success('Booking submitted successfully!');
+      // Reset form
+      setFormData({
+        clientName: '',
+        clientEmail: '',
+        sessionDate: '',
+        sessionTime: '',
+        clientPhone: '',
+        specialRequests: '',
+        serviceType: 'Personalized Coaching'
+      });
+    } catch (error) {
+      console.error('Error submitting booking:', error);
+      toast.error('Failed to submit booking. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
       entries.forEach(entry => {
@@ -24,6 +89,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-tech-dark text-gray-100">
+      <Toaster position="top-right" />
       {/* Hero Section */}
       <header className="relative min-h-screen flex flex-col items-center justify-center text-center px-4">
         <div className="absolute inset-0 tech-gradient opacity-20"></div>
@@ -226,20 +292,28 @@ function App() {
           <h2 className="font-display text-5xl font-bold text-center mb-8 text-glow">Schedule Your Session</h2>
           <p className="text-gray-300 text-xl text-center mb-12">Choose a time that works best for you, and let's start your journey to improvement.</p>
           <div className="bg-tech-gray p-8 rounded-2xl card-glow">
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-gray-300 mb-2">Name</label>
+                  <label className="block text-gray-300 mb-2">Name *</label>
                   <input
                     type="text"
+                    name="clientName"
+                    value={formData.clientName}
+                    onChange={handleInputChange}
+                    required
                     className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
                     placeholder="Your name"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-300 mb-2">Email</label>
+                  <label className="block text-gray-300 mb-2">Email *</label>
                   <input
                     type="email"
+                    name="clientEmail"
+                    value={formData.clientEmail}
+                    onChange={handleInputChange}
+                    required
                     className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
                     placeholder="your@email.com"
                   />
@@ -247,32 +321,71 @@ function App() {
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-gray-300 mb-2">Preferred Date</label>
+                  <label className="block text-gray-300 mb-2">Preferred Date *</label>
                   <input
                     type="date"
+                    name="sessionDate"
+                    value={formData.sessionDate}
+                    onChange={handleInputChange}
+                    required
+                    min={new Date().toISOString().split('T')[0]}
                     className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-300 mb-2">Preferred Time</label>
+                  <label className="block text-gray-300 mb-2">Preferred Time *</label>
                   <input
                     type="time"
+                    name="sessionTime"
+                    value={formData.sessionTime}
+                    onChange={handleInputChange}
+                    required
                     className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-gray-300 mb-2">Message (Optional)</label>
+                <label className="block text-gray-300 mb-2">Service Type *</label>
+                <select
+                  name="serviceType"
+                  value={formData.serviceType}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
+                >
+                  <option value="Personalized Coaching">Personalized Coaching</option>
+                  <option value="VOD Analysis">VOD Analysis</option>
+                  <option value="Competitive Prep">Competitive Prep</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-300 mb-2">Phone Number (Optional)</label>
+                <input
+                  type="tel"
+                  name="clientPhone"
+                  value={formData.clientPhone}
+                  onChange={handleInputChange}
+                  className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
+                  placeholder="Your phone number"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 mb-2">Special Requests (Optional)</label>
                 <textarea
+                  name="specialRequests"
+                  value={formData.specialRequests}
+                  onChange={handleInputChange}
                   className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100 h-32"
                   placeholder="Any additional notes or specific areas you'd like to focus on..."
+                  maxLength={500}
                 ></textarea>
               </div>
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-display font-semibold py-4 px-8 rounded-lg text-lg transition-all hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-display font-semibold py-4 px-8 rounded-lg text-lg transition-all hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Book Session
+                {loading ? 'Submitting...' : 'Book Session'}
               </button>
             </form>
           </div>
