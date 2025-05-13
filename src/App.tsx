@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, Gamepad2, Clock, Target, MessageSquare, Instagram, Twitter, Mail, Hexagon, Calendar, User, Trophy, ArrowRight, Crosshair, Shield, Brain, Zap, Users, Award, BarChart, Loader2 } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from './lib/supabase';
