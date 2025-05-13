@@ -1,5 +1,163 @@
-import React, { useEffect } from 'react';
-import { ChevronDown, Gamepad2, Clock, Target, MessageSquare, Instagram, Twitter, Mail, Hexagon, Calendar, User, Trophy, ArrowRight, Crosshair, Shield, Brain, Zap, Users, Award, BarChart } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown, Gamepad2, Clock, Target, MessageSquare, Instagram, Twitter, Mail, Hexagon, Calendar, User, Trophy, ArrowRight, Crosshair, Shield, Brain, Zap, Users, Award, BarChart, Loader2 } from 'lucide-react';
+import { Toaster, toast } from 'react-hot-toast';
+import { supabase } from './lib/supabase';
+
+function BookingForm() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    date: '',
+    time: '',
+    message: ''
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Validate inputs
+      if (!formData.name || !formData.email || !formData.date || !formData.time) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      // Validate email format
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Validate date is not in the past
+      const selectedDate = new Date(formData.date);
+      if (selectedDate < new Date()) {
+        throw new Error('Please select a future date');
+      }
+
+      const { error } = await supabase
+        .from('bookings')
+        .insert([
+          {
+            name: formData.name,
+            email: formData.email,
+            preferred_date: formData.date,
+            preferred_time: formData.time,
+            message: formData.message || null
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast.success('Booking submitted successfully!');
+      setFormData({
+        name: '',
+        email: '',
+        date: '',
+        time: '',
+        message: ''
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to submit booking');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-gray-300 mb-2">
+            Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-gray-300 mb-2">
+            Email <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
+            required
+          />
+        </div>
+      </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-gray-300 mb-2">
+            Preferred Date <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            name="date"
+            value={formData.date}
+            onChange={handleChange}
+            min={new Date().toISOString().split('T')[0]}
+            className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-gray-300 mb-2">
+            Preferred Time <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="time"
+            name="time"
+            value={formData.time}
+            onChange={handleChange}
+            className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100"
+            required
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-gray-300 mb-2">Message (Optional)</label>
+        <textarea
+          name="message"
+          value={formData.message}
+          onChange={handleChange}
+          maxLength={500}
+          className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100 h-32"
+          placeholder="Any additional notes or specific areas you'd like to focus on..."
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-display font-semibold py-4 px-8 rounded-lg text-lg transition-all hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            Submitting...
+          </>
+        ) : (
+          'Book Session'
+        )}
+      </button>
+    </form>
+  );
+}
 
 function App() {
   useEffect(() => {
@@ -24,6 +182,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-tech-dark text-gray-100">
+      <Toaster position="top-right" />
       {/* Hero Section */}
       <header className="relative min-h-screen flex flex-col items-center justify-center text-center px-4">
         <div className="absolute inset-0 tech-gradient opacity-20"></div>
@@ -226,29 +385,7 @@ function App() {
           <h2 className="font-display text-5xl font-bold text-center mb-8 text-glow">Schedule Your Session</h2>
           <p className="text-gray-300 text-xl text-center mb-12">Choose a time that works best for you, and let's start your journey to improvement.</p>
           <div className="bg-tech-gray p-8 rounded-2xl card-glow">
-            <form className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-gray-300 mb-2">Name</label>
-                  <input type="text" className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100" />
-                </div>
-                <div>
-                  <label className="block text-gray-300 mb-2">Email</label>
-                  <input type="email" className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-gray-300 mb-2">Preferred Date & Time</label>
-                <input type="datetime-local" className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100" />
-              </div>
-              <div>
-                <label className="block text-gray-300 mb-2">Message</label>
-                <textarea className="w-full bg-tech-dark border border-gray-700 rounded-lg p-3 text-gray-100 h-32"></textarea>
-              </div>
-              <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-display font-semibold py-4 px-8 rounded-lg text-lg transition-all hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]">
-                Book Session
-              </button>
-            </form>
+            <BookingForm />
           </div>
         </div>
       </section>
