@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Gamepad2, Clock, Target, MessageSquare, Instagram, Twitter, Mail, Hexagon, Calendar, User, Trophy, ArrowRight, Crosshair, Shield, Brain, Zap, Users, Award, BarChart } from 'lucide-react';
-import { supabase } from './lib/supabase';
+import { submitBookingToAirtable } from './services/airtable';
 import toast, { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -28,27 +28,33 @@ function App() {
     setLoading(true);
 
     try {
-      // Convert date and time strings to proper format
-      const sessionDateTime = new Date(`${formData.sessionDate}T${formData.sessionTime}`);
+      // Submit to Airtable
+      const result = await submitBookingToAirtable({
+        name: formData.clientName,
+        email: formData.clientEmail,
+        phone: formData.clientPhone || '',
+        sessionDate: formData.sessionDate,
+        sessionTime: formData.sessionTime,
+        serviceType: formData.serviceType,
+        specialRequests: formData.specialRequests
+      });
 
-      const { error } = await supabase
-        .from('session_bookings')
-        .insert([
-          {
-            client_name: formData.clientName,
-            client_email: formData.clientEmail,
-            session_date: sessionDateTime.toISOString(),
-            session_time: formData.sessionTime,
-            service_type: formData.serviceType,
-            client_phone: formData.clientPhone || null,
-            special_requests: formData.specialRequests || null,
-            booking_status: 'pending'
+      // Show success message with submitted information
+      toast.success(
+        `Booking submitted successfully!\n\nConfirmation Details:\nName: ${formData.clientName}\nEmail: ${formData.clientEmail}\nDate: ${formData.sessionDate}\nTime: ${formData.sessionTime}\nService: ${formData.serviceType}`,
+        {
+          duration: 8000,
+          style: {
+            background: '#10B981',
+            color: 'white',
+            padding: '16px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            lineHeight: '1.4'
           }
-        ]);
+        }
+      );
 
-      if (error) throw error;
-
-      toast.success('Booking submitted successfully!');
       // Reset form
       setFormData({
         clientName: '',
@@ -59,9 +65,14 @@ function App() {
         specialRequests: '',
         serviceType: 'Personalized Coaching'
       });
+
+      console.log('Booking submitted to Airtable:', result);
     } catch (error) {
       console.error('Error submitting booking:', error);
-      toast.error('Failed to submit booking. Please try again.');
+      toast.error('Failed to submit booking. Please try again.', {
+        duration: 5000,
+        style: { background: '#EF4444', color: 'white' }
+      });
     } finally {
       setLoading(false);
     }
