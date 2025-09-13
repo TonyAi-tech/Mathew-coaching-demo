@@ -23,11 +23,13 @@ interface AirtableRecord {
 }
 
 const AIRTABLE_BASE_ID = 'appomlTGiGnNYGsAp';
-const AIRTABLE_TABLE_NAME = 'Airtable Data';
+const AIRTABLE_TABLE_NAME = 'tblYourTableId'; // You need to replace this with your actual table ID
 const AIRTABLE_API_KEY = 'patltMn5X6aE8FsMk.b361610f088219a58e23fbeb3c085c2702c09cca505af1ca5a858d9103193b68';
 
 export const submitBookingToAirtable = async (bookingData: BookingData): Promise<any> => {
-  const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}`;
+  // Try using the table name first, then fall back to table ID if needed
+  const tableName = 'Airtable Data';
+  const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
   
   const record: AirtableRecord = {
     fields: {
@@ -60,16 +62,19 @@ export const submitBookingToAirtable = async (bookingData: BookingData): Promise
         'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(record)
+      body: JSON.stringify({
+        records: [record]
+      })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(`Airtable API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      console.error('Airtable API Error Details:', errorData);
+      throw new Error(`Airtable API error: ${response.status} - ${errorData.error?.message || errorData.error?.type || 'Unknown error'}`);
     }
 
     const data = await response.json();
-    return data;
+    return data.records[0]; // Return the first record from the response
   } catch (error) {
     console.error('Error submitting to Airtable:', error);
     throw error;
